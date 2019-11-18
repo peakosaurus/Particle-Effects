@@ -141,7 +141,7 @@ void StreamOutGS(point Particle gin[1],
 			p.SizeW       = float2(3.0f, 3.0f);
 			p.Age         = 0.0f;
 			p.Type        = PT_FLARE;
-            p.RotationSpeed = vRandom.x * 100; // init RotationSpeed, chose vRandom purely on the fact that it said random
+            p.RotationSpeed = 0; //RandUnitVec3(gin[0].Age); // init RotationSpeed, chose vRandom purely on the fact that it said random
 			ptStream.Append(p);
 			
 			// reset the time to emit
@@ -188,7 +188,8 @@ struct VertexOut
 	float2 SizeW : SIZE;
 	float4 Color : COLOR;
 	uint   Type  : TYPE;
-    float RotationSpeed : ROTATIONSPEED;
+    float RotationAngle : ROTATIONANGLE;
+    // float RotationSpeed : ROTATIONSPEED;
 };
 
 VertexOut DrawVS(Particle vin)
@@ -206,7 +207,9 @@ VertexOut DrawVS(Particle vin)
 	
 	vout.SizeW = vin.SizeW;
 	vout.Type  = vin.Type;
-    vout.RotationSpeed = vin.RotationSpeed; 
+    // vout.RotationSpeed = vin.RotationSpeed;
+    vout.RotationAngle = vin.RotationSpeed * t;
+
 	return vout;
 }
 
@@ -241,10 +244,10 @@ void DrawGS(point VertexOut gin[1],
 		float halfHeight = 0.5f*gin[0].SizeW.y;
 	
 		float4 v[4];
-        v[0] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(135)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(135)) * halfHeight * up, 1.0f);
-        v[1] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(45)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(45)) * halfHeight * up, 1.0f);
-        v[2] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(225)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(225)) * halfHeight * up, 1.0f);
-        v[3] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(315)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(315)) * halfHeight * up, 1.0f);
+        v[0] = float4(gin[0].PosW + sin(gin[0].RotationAngle + radians(135)) * halfWidth * right + cos(gin[0].RotationAngle + radians(135)) * halfHeight * up, 1.0f); //cast the number to radians to stop flat looking like flames
+        v[1] = float4(gin[0].PosW + sin(gin[0].RotationAngle + radians(45)) * halfWidth * right + cos(gin[0].RotationAngle+ radians(45)) * halfHeight * up, 1.0f);
+        v[2] = float4(gin[0].PosW + sin(gin[0].RotationAngle + radians(225)) * halfWidth * right + cos(gin[0].RotationAngle + radians(225)) * halfHeight * up, 1.0f);
+        v[3] = float4(gin[0].PosW + sin(gin[0].RotationAngle + radians(315)) * halfWidth * right + cos(gin[0].RotationAngle + radians(315)) * halfHeight * up, 1.0f);
 
 
 		

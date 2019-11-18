@@ -18,6 +18,7 @@ class ParticleSystem
 		float Age;
 		unsigned int Type;
 		float RotationSpeed;  //added a rotation speed
+
 	};
 
 public:
