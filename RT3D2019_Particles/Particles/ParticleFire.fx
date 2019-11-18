@@ -105,6 +105,7 @@ struct Particle
 	float2 SizeW       : SIZE;
 	float Age          : AGE;
 	uint Type          : TYPE;
+    float RotationSpeed : ROTATIONSPEED;
 };
   
 Particle StreamOutVS(Particle vin)
@@ -132,14 +133,15 @@ void StreamOutGS(point Particle gin[1],
 			float3 vRandom2 = RandUnitVec3(0.01f);
 			vRandom.x *= 0.5f;
 			vRandom.z *= 0.5f;
-			
+
+
 			Particle p;
 			p.InitialPosW = gEmitPosW.xyz;
 			p.InitialVelW = vRandom2;
 			p.SizeW       = float2(3.0f, 3.0f);
 			p.Age         = 0.0f;
 			p.Type        = PT_FLARE;
-
+            p.RotationSpeed = vRandom.x * 100; // init RotationSpeed, chose vRandom purely on the fact that it said random
 			ptStream.Append(p);
 			
 			// reset the time to emit
@@ -159,7 +161,7 @@ void StreamOutGS(point Particle gin[1],
 
 GeometryShader gsStreamOut = ConstructGSWithSO( 
 	CompileShader( gs_5_0, StreamOutGS() ), 
-	"POSITION.xyz; VELOCITY.xyz; SIZE.xy; AGE.x; TYPE.x" );
+	"POSITION.xyz; VELOCITY.xyz; SIZE.xy; AGE.x; TYPE.x; ROTATIONSPEED.x"); // added as other things were there
 	
 technique11 StreamOutTech
 {
@@ -186,6 +188,7 @@ struct VertexOut
 	float2 SizeW : SIZE;
 	float4 Color : COLOR;
 	uint   Type  : TYPE;
+    float RotationSpeed : ROTATIONSPEED;
 };
 
 VertexOut DrawVS(Particle vin)
@@ -203,7 +206,7 @@ VertexOut DrawVS(Particle vin)
 	
 	vout.SizeW = vin.SizeW;
 	vout.Type  = vin.Type;
-	
+    vout.RotationSpeed = vin.RotationSpeed; 
 	return vout;
 }
 
@@ -229,7 +232,8 @@ void DrawGS(point VertexOut gin[1],
 		float3 look  = normalize(gEyePosW.xyz - gin[0].PosW);
 		float3 right = normalize(cross(float3(0,1,0), look));
 		float3 up    = cross(look, right);
-		
+      
+
 		//
 		// Compute triangle strip vertices (quad) in world space.
 		//
@@ -237,10 +241,12 @@ void DrawGS(point VertexOut gin[1],
 		float halfHeight = 0.5f*gin[0].SizeW.y;
 	
 		float4 v[4];
-		v[0] = float4(gin[0].PosW + halfWidth*right - halfHeight*up, 1.0f);
-		v[1] = float4(gin[0].PosW + halfWidth*right + halfHeight*up, 1.0f);
-		v[2] = float4(gin[0].PosW - halfWidth*right - halfHeight*up, 1.0f);
-		v[3] = float4(gin[0].PosW - halfWidth*right + halfHeight*up, 1.0f);
+        v[0] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(135)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(135)) * halfHeight * up, 1.0f);
+        v[1] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(45)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(45)) * halfHeight * up, 1.0f);
+        v[2] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(225)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(225)) * halfHeight * up, 1.0f);
+        v[3] = float4(gin[0].PosW + sin(gin[0].RotationSpeed + radians(315)) * halfWidth * right + cos(gin[0].RotationSpeed + radians(315)) * halfHeight * up, 1.0f);
+
+
 		
 		//
 		// Transform quad vertices to world space and output 

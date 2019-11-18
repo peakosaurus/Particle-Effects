@@ -7,8 +7,7 @@
 
 #include "Effects.h"
 
-#define PARTICLE_ELEMENT_DESC_SIZE	5
-
+#define PARTICLE_ELEMENT_DESC_SIZE	6
 class ParticleSystem
 {
 	struct Particle
@@ -18,6 +17,7 @@ class ParticleSystem
 		XMFLOAT2 Size;
 		float Age;
 		unsigned int Type;
+		float RotationSpeed;  //added a rotation speed
 	};
 
 public:
@@ -72,5 +72,7 @@ private:
 	ID3D11InputLayout* ParticleInputLayout;
 	static const D3D11_INPUT_ELEMENT_DESC ParticleElementDesc[ PARTICLE_ELEMENT_DESC_SIZE ];
 };
+
+
 
 #endif // PARTICLE_SYSTEM_H
