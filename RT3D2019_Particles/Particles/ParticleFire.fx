@@ -97,6 +97,7 @@ float3 RandUnitVec3(float offset)
 
 #define PT_EMITTER 0
 #define PT_FLARE 1
+#define PT_SMOKE 2
  
 struct Particle
 {
@@ -118,9 +119,9 @@ Particle StreamOutVS(Particle vin)
 // programed here will generally vary from particle system
 // to particle system, as the destroy/spawn rules will be 
 // different.
-[maxvertexcount(2)]
-void StreamOutGS(point Particle gin[1], 
-                 inout PointStream<Particle> ptStream)
+[maxvertexcount(3)]
+void StreamOutGS(point Particle gin[1], uint primId:SV_PrimitiveID,
+                 inout PointStream<Particle> ptStream) // taken form the frank luna book CHAPTER 11.2.4 SV_PrimitiveID
 {	
 	gin[0].Age += gTimeStep;
 	
@@ -129,8 +130,8 @@ void StreamOutGS(point Particle gin[1],
 		// time to emit a new particle?
 		if( gin[0].Age > 0.005f )
 		{
-			float3 vRandom = RandUnitVec3(0.0f);
-			float3 vRandom2 = RandUnitVec3(0.01f);
+			float3 vRandom = RandUnitVec3(primId);
+			float3 vRandom2 = RandUnitVec3(primId);
 			vRandom.x *= 0.5f;
 			vRandom.z *= 0.5f;
 
@@ -141,20 +142,39 @@ void StreamOutGS(point Particle gin[1],
 			p.SizeW       = float2(3.0f, 3.0f);
 			p.Age         = 0.0f;
 			p.Type        = PT_FLARE;
-            p.RotationSpeed = 0; //RandUnitVec3(gin[0].Age); // init RotationSpeed, chose vRandom purely on the fact that it said random
+            p.RotationSpeed = vRandom.x * 10; //
 			ptStream.Append(p);
+		
+		}
+		    // smoke particle 
+       if (gin[0].Age > 0.5f)
+        {
+            float3 vRandom = RandUnitVec3(primId);
+            float3 vRandom2 = RandUnitVec3(primId);
+            vRandom.x *= 0.5f;
+            vRandom.z *= 0.5f;
+
+    
+            Particle p;
+            p.InitialPosW = gEmitPosW.xyz;
+            p.InitialVelW = vRandom2;
+            p.SizeW = float2(3.0f, 3.0f);
+            p.Age = 0.0f;
+            p.Type = PT_SMOKE;
+            p.RotationSpeed = vRandom.y * 5; //
+            ptStream.Append(p);
 			
 			// reset the time to emit
-			gin[0].Age = 0.0f;
-		}
-		
+            gin[0].Age = 0.0f;
+        }
+
 		// always keep emitters
 		ptStream.Append(gin[0]);
 	}
 	else
 	{
 		// Specify conditions to keep particle; this may vary from system to system.
-		if( gin[0].Age <= 1.0f )
+		if( gin[0].Age <= 5.0f ) // icrease the age that they are alive for
 			ptStream.Append(gin[0]);
 	}		
 }
@@ -188,7 +208,7 @@ struct VertexOut
 	float2 SizeW : SIZE;
 	float4 Color : COLOR;
 	uint   Type  : TYPE;
-    float RotationAngle : ROTATIONANGLE;
+    float RotationAngle : ROTATIONANGLE; 
     // float RotationSpeed : ROTATIONSPEED;
 };
 
@@ -196,19 +216,28 @@ VertexOut DrawVS(Particle vin)
 {
 	VertexOut vout;
 	
-	float t = vin.Age;
+	float t = vin.Age ;
 	
 	// constant acceleration equation
 	vout.PosW = 0.5f*t*t*gAccelW + t*vin.InitialVelW + vin.InitialPosW;
 	
 	// fade color with time
-	float opacity = 1.0f - smoothstep(0.0f, 1.0f, t/1.0f);
+    
+    float opacity;
+    if (vin.Type == PT_SMOKE)
+    {
+     opacity = .7f - smoothstep(0.0f, 1.0f, t / 4.0f); //increase the time parcticle is alive for 
+    }
+    else
+    {
+     opacity = 1.0f - smoothstep(0.0f, 1.0f, t / 5.0f); //increase the time parcticle is alive for 
+    }
 	vout.Color = float4(1.0f, 1.0f, 1.0f, opacity);
 	
 	vout.SizeW = vin.SizeW;
 	vout.Type  = vin.Type;
     // vout.RotationSpeed = vin.RotationSpeed;
-    vout.RotationAngle = vin.RotationSpeed * t;
+    vout.RotationAngle = vin.RotationSpeed * t; //convert to angle
 
 	return vout;
 }
@@ -219,6 +248,7 @@ struct GeoOut
 	float4 PosH  : SV_Position;
 	float4 Color : COLOR;
 	float2 Tex   : TEXCOORD;
+    uint Type : TYPE; // passing the type through
 };
 
 // The draw GS just expands points into camera facing quads.
@@ -262,7 +292,9 @@ void DrawGS(point VertexOut gin[1],
 			gout.PosH  = mul(v[i], gViewProj);
 			gout.Tex   = gQuadTexC[i];
 			gout.Color = gin[0].Color;
+            gout.Type = gin[0].Type;
 			triStream.Append(gout);
+   
 			
 		}	
 	}
@@ -270,7 +302,7 @@ void DrawGS(point VertexOut gin[1],
 
 float4 DrawPS(GeoOut pin) : SV_TARGET
 {
-	return gTexArray.Sample(samLinear, float3(pin.Tex, 0) )*pin.Color;
+	return gTexArray.Sample(samLinear, float3(pin.Tex, pin.Type - 1) )*pin.Color;
 }
 
 technique11 DrawTech
